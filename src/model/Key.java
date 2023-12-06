@@ -1,6 +1,8 @@
 package model;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 public class Key implements IKey {
     @Override
@@ -47,6 +49,32 @@ public class Key implements IKey {
     }
 
     @Override
+    public KeyStruct KEYsubsetsum(KeyStruct k, KeyStruct[] T, List<HashMap<Byte, KeyStruct>> SymbolTable) {
+        KeyStruct sum = new KeyStruct();
+        for (int i = 0; i < C; i++) {
+            KeyStruct storedKey = SymbolTable.get(i).get(k.digits[i]);
+
+            if (storedKey != null) {
+                sum = KEYadd(sum, storedKey);
+                continue;
+            }
+
+            KeyStruct newStoredKey = new KeyStruct();
+            for (int j = 0; j < B; j++) {
+                int index = i*B + j;
+                if (KEYbit(k, index) == 1) {
+                    newStoredKey = KEYadd(newStoredKey, T[index]);
+                    //System.out.printf("%2d ", i);   // for debugging
+                    //KEYshow(T[i]);                  // for debugging
+                }
+            }
+            SymbolTable.get(i).put(k.digits[i], newStoredKey);
+            sum = KEYadd(sum, newStoredKey);
+        }
+        return sum;
+    }
+
+    @Override
     public KeyStruct KEYinit() {
         KeyStruct k = new KeyStruct();
         Arrays.fill(k.digits, (byte) 0);
@@ -60,16 +88,6 @@ public class Key implements IKey {
             for (int j = 0; j < R; j++)
                 if (s.charAt(i) == ALPHABET.charAt(j))
                     k.digits[i] = (byte) j;
-        return k;
-    }
-
-    @Override
-    public KeyStruct KEYinit(char ch, int i) {
-        KeyStruct k = new KeyStruct();
-        Arrays.fill(k.digits, (byte) 0);
-        for (int j = 0; j < R; j++)
-            if (ch == ALPHABET.charAt(j))
-                k.digits[i] = (byte) j;
         return k;
     }
 

@@ -19,6 +19,7 @@ public class Brute {
             System.exit(1);
         }
 
+        // Initialize objects
         Key key = new Key();
 
         // Read encrypted passwords from the specified file
@@ -29,29 +30,17 @@ public class Brute {
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(args[2]))) {
             for (IKey.KeyStruct encryptedPassword : encryptedPasswords) {
-                // Print out input encrypted password
-                System.out.print("   ");
-                key.KEYshow(encryptedPassword);
-                System.out.println();
 
                 // Brute-force decryption
                 IKey.KeyStruct password = key.KEYinit();
                 IKey.KeyStruct encrypted = key.KEYsubsetsum(password, T);
 
-                while (true) {
-                    key.KEYshow(password);
-
-                    if (key.equals(encrypted, encryptedPassword)) {
-                        break;
-                    }
-
+                while (!key.equals(encrypted, encryptedPassword)) {
+                    //key.KEYshow(password);        // for debugging
+                    //key.KEYshow(encrypted);        // for debugging
                     password = key.KEYnext(password);
                     encrypted = key.KEYsubsetsum(password, T);
                 }
-
-                System.out.print("   ");
-                key.KEYshow(password);
-                System.out.println();
 
                 // Write results to the output file
                 StringBuilder decryptedString = new StringBuilder();

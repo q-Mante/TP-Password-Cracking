@@ -1,97 +1,66 @@
-//package run;
-//
-//import model.IKey;
-//import model.Key;
-//
-//import java.util.HashMap;
-//import java.util.Scanner;
-//
-//public class Decrypt {
-//
-//    public static void main(String[] args) {
-//        if (args.length != 1) {
-//            System.err.println("Usage: Get-Content \"fileName.txt\" | java -cp bin run.Decrypt \"password\"");
-//            System.exit(1);
-//        }
-//
-//        Key key = new Key();
-//
-//        // The user encrypted password
-//        IKey.KeyStruct encryptedPassword = key.KEYinit(args[0]);
-//
-//        // Print out input encrypted password
-//        System.out.print("   ");
-//        key.KEYshow(encryptedPassword);
-//        System.out.println();
-//
-//        // Read in table T
-//        IKey.KeyStruct[] T = new IKey.KeyStruct[Key.N];
-//        Scanner scanner = new Scanner(System.in);
-//
-//        for (int i = 0; i < Key.N; i++) {
-//            String buffer = scanner.next();
-//            T[i] = key.KEYinit(buffer);
-//        }
-//
-//        // Initialize symbol table
-//        HashMap<IKey.KeyStruct, IKey.KeyStruct> symbolTable = new HashMap<>();
-//
-//        IKey.KeyStruct[] initialSubsets = new IKey.KeyStruct[Key.C];
-//        for (int i = 0; i < Key.C; i++) {
-//            initialSubsets[i] = key.KEYinitOneDigit(1, i);
-//            for (int j = 0; j < Key.R; j++) {
-//                IKey.KeyStruct existingSum = symbolTable.get(initialSubsets[i]);
-//                if (existingSum == null) {
-//                    IKey.KeyStruct sum = key.KEYsubsetsum(initialSubsets[i], T);
-//                    symbolTable.put(initialSubsets[i], sum);
-//                } else {
-//
-//                }
-//            }
-//
-//
-//            IKey.KeyStruct sum = key.KEYsubsetsum(initialSubsets[i], T);
-//        }
-//
-//        for (int i = 0; i < Key.C; i++)
-//
-//        for (IKey.KeyStruct subset : initialSubsets) {
-//            for (int i = )
-//            IKey.KeyStruct sum = key.KEYsubsetsum(subset, T);
-//        }
-//
-//
-//
-//
-//
-//        // Find the decryption key using symbol-table approach
-//        for (IKey.KeyStruct subset : initialSubsets) {
-//            IKey.KeyStruct sum = key.KEYsubsetsum(subset, T); // Compute the subset sum
-//            symbolTable.put(sum, subset); // Store the subset sum and its corresponding subset
-//
-//            // Expand the subset
-//            for (int i = 0; i < Key.N; i++) {
-//                if (key.KEYbit(subset, i) == 0) { // Check if the i-th bit is 0
-//                    key.KEYshow(subset);
-//                    IKey.KeyStruct newSubset = key.KEYnext(subset); // Create a new subset by setting the i-th bit to 1
-//                    IKey.KeyStruct newSum = key.KEYsubsetsum(newSubset, T); // Compute the subset sum of the new subset
-//
-//                    // Check if the new subset sum is already in the symbol table
-//                    IKey.KeyStruct existingSubset = symbolTable.get(newSum);
-//
-//                    if (existingSubset == null) { // If the new subset sum is not in the symbol table
-//
-//                        symbolTable.put(newSum, newSubset); // Add the new subset sum and its corresponding subset to the symbol table
-//                    } else { // If the new subset sum is already in the symbol table
-//                        key.KEYshow(existingSubset);
-//                        if (newSum.equals(encryptedPassword)) { // Check if the sum equals the encrypted password
-//                            System.out.println("Decrypted password: ");
-//                            key.KEYshow(existingSubset);
-//                            System.exit(0); // Terminate the program
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
+package run;
+
+import model.IKey;
+import model.Key;
+
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import static utils.WRUtils.readPasswordsFromFile;
+import static utils.WRUtils.readTableFromFile;
+
+public class Decrypt {
+    public static void main(String[] args) {
+        if (args.length != 3) {
+            System.err.println("Usage:java -cp bin run.Decrypt \"encrypted.txt\" \"table.txt\" \"decrypted.txt\"");
+            System.exit(1);
+        }
+
+        // Initialize objects
+        Key key = new Key();
+        List<HashMap<Byte, IKey.KeyStruct>> SymbolTable = new ArrayList<>(Key.C);
+
+        // Initialize each element of the hashmap list
+        for (int i = 0; i < Key.C; i++) {
+            SymbolTable.add(new HashMap<>());
+        }
+
+        // Read encrypted passwords from the specified file
+        List<IKey.KeyStruct> encryptedPasswords = readPasswordsFromFile(args[0], key);
+
+        // Read in table T
+        IKey.KeyStruct[] T = readTableFromFile(args[1], key);
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(args[2]))) {
+            for (IKey.KeyStruct encryptedPassword : encryptedPasswords) {
+
+                // Symbol-table decryption
+                IKey.KeyStruct password = key.KEYinit();
+                IKey.KeyStruct encrypted = key.KEYsubsetsum(password, T, SymbolTable);
+
+                while (!key.equals(encrypted, encryptedPassword)) {
+                    //key.KEYshow(password);        // for debugging
+                    //key.KEYshow(encrypted);        // for debugging
+                    password = key.KEYnext(password);
+                    encrypted = key.KEYsubsetsum(password, T, SymbolTable);
+                }
+
+                // Write results to the output file
+                StringBuilder decryptedString = new StringBuilder();
+                for (int i = 0; i < Key.C; i++)
+                    decryptedString.append(Key.ALPHABET.charAt(password.digits[i]));
+
+                writer.println(decryptedString);
+            }
+        } catch (FileNotFoundException e) {
+            System.err.println("Error: File not found - " + args[2]);
+            System.exit(1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
